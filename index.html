@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>V-MALL | Fixed Controls</title>
+    <title>V-MALL | Fixed Movement Pro</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap');
         body { margin: 0; font-family: 'Montserrat', sans-serif; overflow: hidden; background: #000; user-select: none; touch-action: none; }
         
-        /* FIXED JOYSTICK */
+        /* JOYSTICK */
         #joystick-wrapper {
             position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
             width: 140px; height: 140px; background: rgba(255, 255, 255, 0.1);
@@ -42,7 +42,7 @@
 
     <script>
       let moveX = 0; let moveZ = 0;
-      const speed = 0.18;
+      const speed = 0.22; // Slightly faster for better feel
 
       // JOYSTICK PHYSICS
       const knob = document.getElementById('joystick-knob');
@@ -63,7 +63,7 @@
 
           knob.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`;
 
-          // PHYSICS FIX:
+          // RAW VALUES
           moveX = (Math.cos(angle) * (dist / 60));
           moveZ = (Math.sin(angle) * (dist / 60));
       };
@@ -88,14 +88,14 @@
           const pos = cam.getAttribute('position');
           const rad = rot.y * (Math.PI / 180);
 
-          // THE FIX: Inverting the moveZ logic so pushing UP (positive dy) moves you -Z (Forward)
-          // moveZ here comes from dy. If dy is negative (Up), we want to move forward.
-          pos.x -= Math.sin(rad) * (moveZ * speed);
-          pos.z -= Math.cos(rad) * (moveZ * speed);
+          // THE ULTIMATE INVERSION FIX:
+          // Pushing UP now adds to Forward motion correctly
+          pos.x += Math.sin(rad) * (moveZ * speed);
+          pos.z += Math.cos(rad) * (moveZ * speed);
           
-          // Strafe logic
-          pos.x += Math.cos(rad) * (moveX * speed);
-          pos.z += Math.sin(rad) * (moveX * speed);
+          // Strafe Correction (Sideways)
+          pos.x -= Math.cos(rad) * (moveX * speed);
+          pos.z -= Math.sin(rad) * (moveX * speed);
           
           cam.setAttribute('position', pos);
         }
