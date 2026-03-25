@@ -1,20 +1,24 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>V-MALL | Mobile Controller Pro</title>
+    <title>V-MALL | Mobile Joystick Pro</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap');
-        body { margin: 0; font-family: 'Montserrat', sans-serif; overflow: hidden; background: #000; }
+        body { margin: 0; font-family: 'Montserrat', sans-serif; overflow: hidden; background: #000; user-select: none; }
         
-        /* BOTTOM CENTER GEAR */
-        #mobile-controls {
-            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-            width: 60px; height: 60px; background: rgba(10, 25, 47, 0.95);
-            border: 2px solid #64ffda; border-radius: 50%; color: #64ffda;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 30px; cursor: pointer; z-index: 1000; box-shadow: 0 0 15px #64ffda;
+        /* MOBILE MOVEMENT CONTROLS */
+        #controls {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            display: flex; flex-direction: column; gap: 15px; z-index: 1000;
         }
+        .move-btn {
+            width: 70px; height: 70px; background: rgba(10, 25, 47, 0.9);
+            border: 2px solid #64ffda; border-radius: 15px; color: #64ffda;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 30px; cursor: pointer; touch-action: none;
+        }
+        .move-btn:active { background: #64ffda; color: #112240; }
 
         #top-label {
             position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
@@ -33,21 +37,61 @@
   <body>
 
     <div id="top-label">GRAND ATRIUM</div>
-    <button id="exit-btn" onclick="exitToMall()">← EXIT TO MALL</button>
+    <button id="exit-btn" onclick="exitToMall()">← EXIT</button>
     
-    <div id="mobile-controls" onclick="adjustSpeed()">⚙️</div>
+    <div id="controls">
+        <div class="move-btn" id="up-btn">▲</div>
+        <div class="move-btn" id="down-btn">▼</div>
+    </div>
 
     <script>
       let currentBrand = "";
-      let walkSpeed = 1; // Default speed
+      let movingForward = false;
+      let movingBackward = false;
+      const moveSpeed = 0.15;
+
+      // Logic for holding buttons
+      const upBtn = document.getElementById('up-btn');
+      const downBtn = document.getElementById('down-btn');
+
+      upBtn.addEventListener('touchstart', () => movingForward = true);
+      upBtn.addEventListener('touchend', () => movingForward = false);
+      downBtn.addEventListener('touchstart', () => movingBackward = true);
+      downBtn.addEventListener('touchend', () => movingBackward = false);
       
+      // Mouse fallbacks for testing on PC
+      upBtn.addEventListener('mousedown', () => movingForward = true);
+      upBtn.addEventListener('mouseup', () => movingForward = false);
+      downBtn.addEventListener('mousedown', () => movingBackward = true);
+      downBtn.addEventListener('mouseup', () => movingBackward = false);
+
+      // Custom movement loop
+      AFRAME.registerComponent('mobile-move', {
+        tick: function () {
+          const cam = this.el;
+          const rotation = cam.getAttribute('rotation');
+          const position = cam.getAttribute('position');
+          
+          const angle = rotation.y * (Math.PI / 180);
+
+          if (movingForward) {
+            position.x -= Math.sin(angle) * moveSpeed;
+            position.z -= Math.cos(angle) * moveSpeed;
+          }
+          if (movingBackward) {
+            position.x += Math.sin(angle) * moveSpeed;
+            position.z += Math.cos(angle) * moveSpeed;
+          }
+          cam.setAttribute('position', position);
+        }
+      });
+
       const brandLinks = {
         "H&M": "https://www2.hm.com", "Zara": "https://www.zara.com",
         "Gap": "https://www.gap.com", "Hollister": "https://www.hollisterco.com",
         "Blivion": "https://github.com" 
       };
 
-      // Teleport Logic
       AFRAME.registerComponent('gate-logic', {
         schema: { brand: {type: 'string'} },
         init: function () {
@@ -62,19 +106,7 @@
         }
       });
 
-      function adjustSpeed() {
-          let input = prompt("Set Walking Speed (0 = Stop, 1 = Normal, 3 = Fast):", walkSpeed);
-          if (input !== null) {
-              walkSpeed = parseFloat(input);
-              const cam = document.querySelector('#camera');
-              // Update the WASD/Touch movement speed
-              cam.setAttribute('wasd-controls', `acceleration: ${walkSpeed * 65}`);
-          }
-      }
-
-      function redirectToStore() {
-        window.open(brandLinks[currentBrand], '_blank');
-      }
+      function redirectToStore() { window.open(brandLinks[currentBrand], '_blank'); }
 
       function exitToMall() {
         document.querySelector('#mall-world').setAttribute('visible', 'true');
@@ -87,11 +119,8 @@
 
     <a-scene cursor="rayOrigin: mouse" renderer="antialias: true">
       
-      <a-entity id="camera" camera 
-                look-controls="touchEnabled: true; magicWindowTrackingEnabled: true" 
-                wasd-controls="acceleration: 65" 
-                position="0 1.6 8">
-        <a-cursor color="#64ffda"></a-cursor>
+      <a-entity id="camera" camera look-controls="touchEnabled: true" mobile-move position="0 1.6 8">
+        <a-cursor color="#64ffda" raycaster="objects: .clickable, a-box, a-ring"></a-cursor>
       </a-entity>
 
       <a-entity id="mall-world">
@@ -118,9 +147,8 @@
                             <a-text value="${brand.name}" align="center" width="10"></a-text>
                         </a-plane>
                     </a-box>
-                    <a-ring color="#64ffda" radius-inner="1" radius-outer="1.3" position="0 0.1 4" rotation="-90 0 0" gate-logic="brand: ${brand.name}" material="emissive: #64ffda; emissiveIntensity: 2"></a-ring>
+                    <a-ring color="#64ffda" radius-inner="1" radius-outer="1.3" position="0 0.1 4" rotation="-90 0 0" gate-logic="brand: ${brand.name}"></a-ring>
                 `;
-                sceneMall = document.querySelector('#mall-world'); // Reference safety
                 mall.appendChild(stall);
             });
           </script>
@@ -129,11 +157,6 @@
       <a-entity id="store-interior" visible="false">
           <a-sky color="#0a0a0a"></a-sky>
           <a-plane rotation="-90 0 0" width="20" height="20" color="#1a1a1a"></a-plane>
-          
-          <a-plane position="0 5 -10" width="20" height="10" color="#222"></a-plane>
-          <a-plane position="-10 5 0" rotation="0 90 0" width="20" height="10" color="#222"></a-plane>
-          <a-plane position="10 5 0" rotation="0 -90 0" width="20" height="10" color="#222"></a-plane>
-
           <a-cylinder position="0 0.1 -5" radius="2" height="0.2" color="#ff4d4d"></a-cylinder>
           <a-box position="0 2 -5" width="1.5" height="1.5" depth="1.5" color="#112240" 
                  class="clickable" onclick="redirectToStore()" 
