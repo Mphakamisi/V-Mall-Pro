@@ -83,8 +83,14 @@
 
       function openBrowser() {
         const frame = document.getElementById('store-frame');
-        frame.src = brandLinks[currentBrand]; 
+        const targetUrl = brandLinks[currentBrand];
+        
+        // This is a proxy that helps bypass the "Refused to Connect" error
+        const proxyUrl = "https://api.allorigins.win/raw?url=";
+        
+        frame.src = proxyUrl + encodeURIComponent(targetUrl); 
         document.getElementById('web-browser').style.display = "block";
+      }
       }
 
       function openStoreExternal() {
