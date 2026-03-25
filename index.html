@@ -1,16 +1,16 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>V-MALL | Pro Device-Aware Edition</title>
+    <title>V-MALL | Fixed Controls</title>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700&display=swap');
         body { margin: 0; font-family: 'Montserrat', sans-serif; overflow: hidden; background: #000; user-select: none; touch-action: none; }
         
-        /* INNOVATIVE JOYSTICK - Only shows on Mobile */
+        /* FIXED JOYSTICK */
         #joystick-wrapper {
-            display: none; position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
-            width: 140px; height: 140px; background: rgba(255, 255, 255, 0.05);
+            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+            width: 140px; height: 140px; background: rgba(255, 255, 255, 0.1);
             border: 2px solid #64ffda; border-radius: 50%; z-index: 1000;
         }
         #joystick-knob {
@@ -43,12 +43,6 @@
     <script>
       let moveX = 0; let moveZ = 0;
       const speed = 0.18;
-      let isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-      // INNOVATIVE: Show joystick only if mobile is detected
-      if (isMobile) {
-          document.getElementById('joystick-wrapper').style.display = 'block';
-      }
 
       // JOYSTICK PHYSICS
       const knob = document.getElementById('joystick-knob');
@@ -69,7 +63,7 @@
 
           knob.style.transform = `translate(${Math.cos(angle) * dist}px, ${Math.sin(angle) * dist}px)`;
 
-          // INNOVATION: Inverted Y so Up is Forward, Down is Back
+          // PHYSICS FIX:
           moveX = (Math.cos(angle) * (dist / 60));
           moveZ = (Math.sin(angle) * (dist / 60));
       };
@@ -82,7 +76,6 @@
       base.addEventListener('touchstart', (e) => { dragging = true; updateMove(e); });
       window.addEventListener('touchmove', updateMove);
       window.addEventListener('touchend', stopMove);
-      // PC Testing support
       base.addEventListener('mousedown', () => dragging = true);
       window.addEventListener('mousemove', updateMove);
       window.addEventListener('mouseup', stopMove);
@@ -95,9 +88,12 @@
           const pos = cam.getAttribute('position');
           const rad = rot.y * (Math.PI / 180);
 
-          // Corrected Movement Vectors
+          // THE FIX: Inverting the moveZ logic so pushing UP (positive dy) moves you -Z (Forward)
+          // moveZ here comes from dy. If dy is negative (Up), we want to move forward.
           pos.x -= Math.sin(rad) * (moveZ * speed);
           pos.z -= Math.cos(rad) * (moveZ * speed);
+          
+          // Strafe logic
           pos.x += Math.cos(rad) * (moveX * speed);
           pos.z += Math.sin(rad) * (moveX * speed);
           
@@ -116,10 +112,8 @@
         schema: { brand: {type: 'string'} },
         init: function () {
           this.el.addEventListener('click', () => {
-            const mall = document.querySelector('#mall-world');
-            const interior = document.querySelector('#store-interior');
-            mall.setAttribute('visible', 'false');
-            interior.setAttribute('visible', 'true');
+            document.querySelector('#mall-world').setAttribute('visible', 'false');
+            document.querySelector('#store-interior').setAttribute('visible', 'true');
             document.querySelector('#top-label').innerText = this.data.brand;
             document.querySelector('#exit-btn').style.display = "block";
             document.querySelector('#camera').setAttribute('position', '0 1.6 4');
@@ -137,7 +131,7 @@
       }
     </script>
 
-    <a-scene cursor="rayOrigin: mouse" renderer="antialias: true">
+    <a-scene cursor="rayOrigin: mouse">
       <a-entity id="camera" camera 
                 look-controls="touchEnabled: true; magicWindowTrackingEnabled: false" 
                 smart-move position="0 1.6 8">
